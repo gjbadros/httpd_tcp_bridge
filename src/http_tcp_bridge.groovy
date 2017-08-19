@@ -24,6 +24,7 @@ cli.p(args:1, argName:'PORT', 'Use PORT for the HTTP service (defaults to 7316)'
 cli.U('Default to url-unescaping the TCP response')
 cli.s('Default to doing a single socket send (rather than splitting into linefeed-separated sends)')
 cli.L('Add a linefeed (ascii 10) to each line sent to the socket')
+cli.r('Add a carriage return (ascii 13) to each line sent to the socket')
 cli.C(args:1, argName:'CONFIG_FILE', 'Read ip/port options from CONFIG_FILE, defaults to $HOME/.httpd-tcp-bridge')
 cli.R(args:1, argName: 'REMOTE_SERVER:PORT', 'Use ssh to listen on REMOTE_SERVER:PORT for HTTP requests, too')
 cli.P('Promiscuous mode: allow addressing any IP address even if not configured in the -C config file')
@@ -126,7 +127,7 @@ class BridgeHandler implements HttpHandler {
   def opt
   def config
   def host_aliases, data_aliases
-  def def_want_html, def_want_uridecode, def_want_singlesend, def_addlf
+  def def_want_html, def_want_uridecode, def_want_singlesend, def_addlf, def_addcr
   
   BridgeHandler(Map m) {
     server = m.server
@@ -138,6 +139,7 @@ class BridgeHandler implements HttpHandler {
     def_want_uridecode = opt.U
     def_want_singlesend = opt.s
     def_addlf = opt.L
+    def_addcr = opt.r
   }
  
   public static Map query_as_map( String query ) {
@@ -168,7 +170,8 @@ class BridgeHandler implements HttpHandler {
     }
   }
 
-  String doTCPSend(String dest, String data, boolean want_singlesend, boolean want_uridecode, boolean want_html, boolean addlf) {
+  String doTCPSend(String dest, String data, boolean want_singlesend, boolean want_uridecode, boolean want_html,
+                   boolean addlf, boolean addcr) {
     def (host, port) = dest.split(':')
     def s = new Socket(host, port.toInteger())
     s.setSoTimeout(5000)
@@ -180,6 +183,9 @@ class BridgeHandler implements HttpHandler {
     for (d in data_lines) {
       if (addlf) {
         d += "\n"
+      }
+      if (addcr) {
+        d += "\r"
       }
       s.outputStream.write(d.bytes)
       println " Output $d to socket $s"
@@ -194,8 +200,10 @@ class BridgeHandler implements HttpHandler {
         response = URLDecoder.decode(response, "UTF-8")
       }
       if (want_html) {
+        def request = html_escape(d)
+        full_response += "<p class='request'>SENT: $request</p>"
         response = html_escape(response)
-        full_response += "<p>$response</p>"
+        full_response += "<p class='response'>$response</p>"
       } else {
         full_response += response
       }
@@ -222,6 +230,7 @@ class BridgeHandler implements HttpHandler {
       def want_uridecode = bool_param('uridecode', def_want_uridecode)
       def want_singlesend = bool_param('singlesend', def_want_singlesend)
       def addlf = bool_param('addlf', def_addlf)
+      def addcr = bool_param('addcr', def_addcr)
 
       def uri = exchange.requestURI.path
       println "orig_uri = $uri"
@@ -237,7 +246,7 @@ class BridgeHandler implements HttpHandler {
             found_match = true
             println "found_match on ${c.regex}"
             for (def o in c.options) {
-              def matcher = o =~ /^(?i)(!?)(html|uridecode|singlesend|addlf|forcedone)$/
+              def matcher = o =~ /^(?i)(!?)(html|uridecode|singlesend|addlf|addcr|forcedone)$/
               if (matcher.matches()) {
                 def ov = matcher[0][2]
                 def val = !(matcher[0][1] == '!')
@@ -246,6 +255,7 @@ class BridgeHandler implements HttpHandler {
                   case 'uridecode': want_uridecode = val; break
                   case 'singlesend': want_singlesend = val; break
                   case 'addlf': addlf = val; break
+                  case 'addcr': addcr = val; break
                   case 'stop': break outer
                 }
               }
@@ -259,9 +269,9 @@ class BridgeHandler implements HttpHandler {
         data = URLDecoder.decode(data, "UTF-8")
         def debug = bool_param('debug', false)
         if (debug) {
-          response = "html = $want_html, uridecode = $want_uridecode, singlesend = $want_singlesend, addlf = $addlf: dest = $dest, data = $data"
+          response = "html = $want_html, uridecode = $want_uridecode, singlesend = $want_singlesend, addlf = $addlf, addcr = $addcr: dest = $dest, data = $data"
         }
-        response += doTCPSend(dest, data, want_singlesend, want_uridecode, want_html, addlf)
+        response += doTCPSend(dest, data, want_singlesend, want_uridecode, want_html, addlf, addcr)
 
         response_type = want_html ? 'text/html' : 'text/plain'
         response_code = 200
