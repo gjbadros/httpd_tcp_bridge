@@ -190,22 +190,28 @@ class BridgeHandler implements HttpHandler {
       s.outputStream.write(d.bytes)
       println " Output $d to socket $s"
       def buffer = new byte[4096]
-      def len = s.inputStream.read(buffer, 0, buffer.size())
-      if (len == 0) {
-        continue
-      }
-      def response = new String(buffer, 0, len, StandardCharsets.UTF_8)
-      println "read $response from socket"
-      if (want_uridecode) {
-        response = URLDecoder.decode(response, "UTF-8")
-      }
-      if (want_html) {
-        def request = html_escape(d)
-        full_response += "<p class='request'>SENT: $request</p>"
-        response = html_escape(response)
-        full_response += "<p class='response'>$response</p>"
-      } else {
-        full_response += response
+      try {
+        def len = s.inputStream.read(buffer, 0, buffer.size())
+        if (len == 0) {
+          println "got len == 0"
+          continue
+        }
+        def response = new String(buffer, 0, len, StandardCharsets.UTF_8)
+        println "read $response from socket"
+        if (want_uridecode) {
+          response = URLDecoder.decode(response, "UTF-8")
+        }
+        if (want_html) {
+          def request = html_escape(d)
+          full_response += "<p class='request'>SENT: $request</p>"
+          response = html_escape(response)
+          full_response += "<p class='response'>$response</p>"
+        } else {
+          full_response += response
+        }
+      } catch (SocketTimeoutException e) {
+        s.close()
+        return "socket timeout " + e;
       }
     }
     if (want_html) {
