@@ -1,0 +1,9 @@
+:9090$	uridecode,addlf   # allow connections to squeezebox CLI port 9090 on any host
+:4998$	uridecode,addcr   # globalcache is on 4998 and expects a bare carriage return at end
+
+squeeze 192.168.0.238:9090   # rewrite /d/squeeze to this IP/port
+GCIR_GreatRoom 192.168.0.248:4998
+
+numplayers player count ?    # rewrite /d/squeeze/numplayers to report numplayers
+players players 0 5
+Onkyo_VolDown sendir,1:3,1,38000,1,1,339,170,21,21,21,63,21,21,21,21,21,63,21,21,21,63,21,63,21,63,21,21,21,63,21,63,21,21,21,63,21,63,21,21,21,63,21,63,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,63,21,63,21,63,21,63,21,63,21,63,21,1466
