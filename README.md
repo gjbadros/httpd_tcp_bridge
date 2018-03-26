@@ -11,6 +11,8 @@ where the server runs.
 
 See [HTTPD-TCP-Bridge.pdf](HTTPD-TCP-Bridge.pdf) for documentation, or run with -h for a usage message.
 
+Try http://localhost:7316/d/GCIR_GreatRoom/Onkyo_PowerOn
+
 ## Warnings
 
 Without any configuration, this server allows access to the entire network that the server has access to.
